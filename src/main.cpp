@@ -1,21 +1,31 @@
+#include "game.hpp"
+
 #include <SFML/Graphics.hpp>
 
 int main()
 {
-    auto window = sf::RenderWindow(sf::VideoMode({1920u, 1080u}), "CMake SFML Project");
-    window.setFramerateLimit(144);
+    auto window = sf::RenderWindow(sf::VideoMode({800u, 600u}), "Arkanoid Cpp");
+    arkanoid_game game;
+    sf::Clock clock;
+
+    window.setFramerateLimit(60);
 
     while (window.isOpen())
     {
+        sf::Time delta_time = clock.getElapsedTime();
         while (const std::optional event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
             {
                 window.close();
             }
+
+            game.process_event(event.value());
         }
 
-        window.clear();
-        window.display();
+        game.update(delta_time);
+        clock.restart();
+        
+        game.draw(window);
     }
 }
