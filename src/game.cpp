@@ -1,17 +1,18 @@
 #include "game.hpp"
 
-arkanoid_game::arkanoid_game() {
-    init_platform();
+arkanoid_game::arkanoid_game(const sf::Vector2u window_size) {
+    game_window_size = window_size;
+    init_platform(window_size);
     init_ball();
 }
 
-void arkanoid_game::init_platform() {
-    constexpr float size_x = 100.f;
-    constexpr float size_y = 20.f;
-    constexpr float start_position_x = 400.f - size_x / 2.f;
-    constexpr float start_position_y = 500.f;
+void arkanoid_game::init_platform(const sf::Vector2u window_size) {
+    constexpr float platform_size_x = 100.f;
+    constexpr float platform_size_y = 20.f;
+    float start_position_x = (window_size.x - platform_size_x) / 2;
+    float start_position_y = window_size.y - platform_size_y * 2;
 
-    platform_shape.setSize(sf::Vector2f(size_x, size_y));
+    platform_shape.setSize(sf::Vector2f(platform_size_x, platform_size_y));
     platform_shape.setFillColor(sf::Color::White);
     platform_shape.setPosition(sf::Vector2f(start_position_x, start_position_y));
 }
@@ -25,39 +26,31 @@ void arkanoid_game::init_ball() {
                                              platform_shape.getPosition().y - ball_shape.getRadius() * 2.f));
 }
 
-sf::RectangleShape arkanoid_game::get_platform_shape() {
+sf::RectangleShape arkanoid_game::get_platform_shape() const {
     return platform_shape;
 }
 
 void arkanoid_game::process_event(const sf::Event& event) {
     if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
-        key_pressed(keyPressed);
+        key_pressed(*keyPressed);
     }
 
     if (const auto* keyReleased = event.getIf<sf::Event::KeyReleased>()) {
-        key_released(keyReleased);
+        key_released(*keyReleased);
     }
 }
 
-void arkanoid_game::key_pressed(const sf::Event::KeyPressed *keyPressed) {
-    switch (keyPressed->code) {
+void arkanoid_game::key_pressed(const sf::Event::KeyPressed &keyPressed) { // Change to reference
+    switch (keyPressed.code) {
         case sf::Keyboard::Key::Left:
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-                platform_direction = direction_single_axis::NONE;
-            } else {
-                platform_direction = direction_single_axis::LEFT;
-            }
+            platform_direction = direction_single_axis::left;
             break;
         case sf::Keyboard::Key::Right:
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-                platform_direction = direction_single_axis::NONE;
-            } else {
-                platform_direction = direction_single_axis::RIGHT;
-            }
+            platform_direction = direction_single_axis::right;
             break;
         case sf::Keyboard::Key::Space:
-            if (current_game_state == game_state::START) {
-                current_game_state = game_state::PLAYING;
+            if (current_game_state == game_state::start) {
+                current_game_state = game_state::playing;
             }
             break;
         default:
@@ -65,21 +58,17 @@ void arkanoid_game::key_pressed(const sf::Event::KeyPressed *keyPressed) {
     }
 }
 
-void arkanoid_game::key_released(const sf::Event::KeyReleased *keyReleased) {
-    switch (keyReleased->code) {
+void arkanoid_game::key_released(const sf::Event::KeyReleased &keyReleased) {
+    switch (keyReleased.code) {
         case sf::Keyboard::Key::Left:
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-                platform_direction = direction_single_axis::RIGHT;
-            } else {
-                platform_direction = direction_single_axis::NONE;
+            if (platform_direction == direction_single_axis::left) {
+                platform_direction = direction_single_axis::none;
             }
             break;
         case sf::Keyboard::Key::Right:
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-                platform_direction = direction_single_axis::LEFT;
-            } else {
-                platform_direction = direction_single_axis::NONE;
-            }
+            if (platform_direction == direction_single_axis::right) {
+                platform_direction = direction_single_axis::none;
+            };
             break;
         default:
             break;
@@ -90,23 +79,23 @@ void arkanoid_game::update(sf::Time delta_time) {
     ///////////////////// PLATFORM SECTION MOVE TO SEPARATE FUNCTION LATER
     float move_distance = 0.2f * delta_time.asMilliseconds();
 
-    if (platform_direction == direction_single_axis::LEFT) {
+    if (platform_direction == direction_single_axis::left) {
         platform_shape.move(sf::Vector2f(-move_distance, 0.f));
     }
     
-    if (platform_direction == direction_single_axis::RIGHT) {
+    if (platform_direction == direction_single_axis::right) {
         platform_shape.move(sf::Vector2f(move_distance, 0.f));
     }
 
     // Collisons with screen
     if (platform_shape.getPosition().x < 0.f) {
         platform_shape.setPosition(sf::Vector2f(0.f, platform_shape.getPosition().y));
-    } else if (platform_shape.getPosition().x + platform_shape.getSize().x > 800.f) {
-        platform_shape.setPosition(sf::Vector2f(800.f - platform_shape.getSize().x, platform_shape.getPosition().y));
+    } else if (platform_shape.getPosition().x + platform_shape.getSize().x > game_window_size.x) {
+        platform_shape.setPosition(sf::Vector2f(game_window_size.x - platform_shape.getSize().x, platform_shape.getPosition().y));
     }
     ///////////////////// END PLATFORM SECTION
     ///////////////////// BALL SECTION
-    if (current_game_state == game_state::START) {
+    if (current_game_state == game_state::start) {
         ball_shape.setPosition(sf::Vector2f(platform_shape.getPosition().x + platform_shape.getSize().x / 2.f - ball_shape.getRadius(),
                                              platform_shape.getPosition().y - ball_shape.getRadius() * 2.f));
     }

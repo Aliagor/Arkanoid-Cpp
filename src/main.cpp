@@ -5,7 +5,7 @@
 int main()
 {
     auto window = sf::RenderWindow(sf::VideoMode({800u, 600u}), "Arkanoid Cpp");
-    arkanoid_game game;
+    arkanoid_game game(window.getSize());
     sf::Clock clock;
 
     window.setFramerateLimit(60);
@@ -23,8 +23,7 @@ int main()
             game.process_event(event.value());
         }
 
-        game.update(delta_time);
-        clock.restart();
+        game.update(clock.restart());
         
         game.draw(window);
     }
