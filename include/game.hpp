@@ -6,13 +6,13 @@
 #include "blocks.hpp"
 
 enum class direction_single_axis {
-    left, //change from upper case
+    left,
     right,
     none
 };
 
 enum class game_state {
-    start, //change from upper case
+    start,
     playing
 };
 
@@ -27,6 +27,7 @@ public:
         
 private:
     sf::Vector2u game_window_size;
+    blocks game_blocks;
     sf::RectangleShape platform_shape;
     enum direction_single_axis platform_direction = direction_single_axis::none;
     

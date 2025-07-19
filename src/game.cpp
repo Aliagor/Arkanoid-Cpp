@@ -1,7 +1,8 @@
 #include "game.hpp"
 
-arkanoid_game::arkanoid_game(const sf::Vector2u window_size) {
-    game_window_size = window_size;
+arkanoid_game::arkanoid_game(const sf::Vector2u window_size)
+    : game_window_size(window_size),
+      game_blocks(window_size) {
     init_platform(window_size);
     init_ball();
 }
@@ -18,7 +19,7 @@ void arkanoid_game::init_platform(const sf::Vector2u window_size) {
 }
 
 void arkanoid_game::init_ball() {
-    constexpr float radius = 10.f;
+    constexpr float radius = 15.f;
 
     ball_shape.setRadius(radius);
     ball_shape.setFillColor(sf::Color::Green);
@@ -104,6 +105,7 @@ void arkanoid_game::update(sf::Time delta_time) {
 
 void arkanoid_game::draw(sf::RenderWindow& window) {
     window.clear();
+    game_blocks.draw(window);
     window.draw(platform_shape);
     window.draw(ball_shape);
     window.display();
