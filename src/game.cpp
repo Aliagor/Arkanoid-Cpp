@@ -52,6 +52,8 @@ void arkanoid_game::key_pressed(const sf::Event::KeyPressed &keyPressed) { // Ch
         case sf::Keyboard::Key::Space:
             if (current_game_state == game_state::start) {
                 current_game_state = game_state::playing;
+
+                ball_angle = -80.f;
             }
             break;
         default:
@@ -99,6 +101,45 @@ void arkanoid_game::update(sf::Time delta_time) {
     if (current_game_state == game_state::start) {
         ball_shape.setPosition(sf::Vector2f(platform_shape.getPosition().x + platform_shape.getSize().x / 2.f - ball_shape.getRadius(),
                                              platform_shape.getPosition().y - ball_shape.getRadius() * 2.f));
+    }
+
+    if (current_game_state == game_state::playing) {
+        float move_x = ball_speed * std::cos(ball_angle * 3.14159f / 180.f) * delta_time.asMilliseconds();
+        float move_y = ball_speed * std::sin(ball_angle * 3.14159f / 180.f) * delta_time.asMilliseconds();
+        ball_shape.move(sf::Vector2f(move_x, move_y));
+
+        // Collisons with screen
+        if (ball_shape.getPosition().x < 0 || ball_shape.getPosition().x + ball_shape.getRadius() * 2 > game_window_size.x) {
+            ball_angle = 180.f - ball_angle;
+        }
+        if (ball_shape.getPosition().y < 0) {
+            ball_angle = -ball_angle;
+        }
+        if (ball_shape.getPosition().y + ball_shape.getRadius() * 2 > game_window_size.y) {
+            current_game_state = game_state::start;
+            // TODO: Change to return value that would indicate game over and handle game restart somewhere else
+        }
+
+        if (circle_rectangle_collision(ball_shape, platform_shape)) {
+            // TODO: Look up math on how to calcule correct angle after collision
+            // For now just negate te angle
+
+            ball_angle = -ball_angle;
+        }
+
+        std::vector<sf::RectangleShape>& block_shapes = game_blocks.get_block_shapes();
+        std::vector<sf::RectangleShape>::iterator it = block_shapes.begin();
+        
+        while (it != block_shapes.end()) {
+            if (circle_rectangle_collision(ball_shape, *it)) {
+                // TODO: Look up math on how to calcule correct angle after collision
+                // For now just negate te angle
+                ball_angle = -ball_angle;
+                block_shapes.erase(it);
+                break;
+            }
+            else ++it;
+        }
     }
     ///////////////////// END BALL SECTION
 }

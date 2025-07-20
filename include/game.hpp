@@ -3,7 +3,10 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Keyboard.hpp>
 
+#include <cmath>
+
 #include "blocks.hpp"
+#include "utils.hpp"
 
 enum class direction_single_axis {
     left,
@@ -32,6 +35,8 @@ private:
     enum direction_single_axis platform_direction = direction_single_axis::none;
     
     sf::CircleShape ball_shape;
+    float ball_angle = 0;
+    float ball_speed = 0.5f;
     
     enum game_state current_game_state = game_state::start;
 

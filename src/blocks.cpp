@@ -36,3 +36,7 @@ void blocks::draw(sf::RenderWindow& window) {
         window.draw(block);
     }
 }
+
+std::vector<sf::RectangleShape>& blocks::get_block_shapes() {
+    return block_shapes;
+}
