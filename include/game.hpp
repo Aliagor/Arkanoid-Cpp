@@ -4,6 +4,7 @@
 #include <SFML/Window/Keyboard.hpp>
 
 #include <cmath>
+#include <random>
 
 #include "blocks.hpp"
 #include "utils.hpp"
@@ -16,7 +17,8 @@ enum class direction_single_axis {
 
 enum class game_state {
     start,
-    playing
+    playing,
+    game_over
 };
 
 class arkanoid_game {
@@ -33,10 +35,15 @@ private:
     blocks game_blocks;
     sf::RectangleShape platform_shape;
     enum direction_single_axis platform_direction = direction_single_axis::none;
+
+    std::random_device rd;
+    std::mt19937 mt{rd()};
     
     sf::CircleShape ball_shape;
     float ball_angle = 0;
     float ball_speed = 0.5f;
+    void ball_collision_x();
+    void ball_collision_y();
     
     enum game_state current_game_state = game_state::start;
 

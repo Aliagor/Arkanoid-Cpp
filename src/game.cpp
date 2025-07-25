@@ -27,6 +27,14 @@ void arkanoid_game::init_ball() {
                                              platform_shape.getPosition().y - ball_shape.getRadius() * 2.f));
 }
 
+void arkanoid_game::ball_collision_x() {
+    ball_angle = 180.f - ball_angle + std::uniform_int_distribution<int>(-5, 5)(mt);
+}
+
+void arkanoid_game::ball_collision_y() {
+    ball_angle = -ball_angle + std::uniform_int_distribution<int>(-5, 5)(mt);
+}
+
 sf::RectangleShape arkanoid_game::get_platform_shape() const {
     return platform_shape;
 }
@@ -80,7 +88,8 @@ void arkanoid_game::key_released(const sf::Event::KeyReleased &keyReleased) {
 
 void arkanoid_game::update(sf::Time delta_time) {
     ///////////////////// PLATFORM SECTION MOVE TO SEPARATE FUNCTION LATER
-    float move_distance = 0.2f * delta_time.asMilliseconds();
+    float platform_speed = 0.2f;
+    float move_distance = platform_speed * delta_time.asMilliseconds();
 
     if (platform_direction == direction_single_axis::left) {
         platform_shape.move(sf::Vector2f(-move_distance, 0.f));
@@ -104,41 +113,51 @@ void arkanoid_game::update(sf::Time delta_time) {
     }
 
     if (current_game_state == game_state::playing) {
-        float move_x = ball_speed * std::cos(ball_angle * 3.14159f / 180.f) * delta_time.asMilliseconds();
-        float move_y = ball_speed * std::sin(ball_angle * 3.14159f / 180.f) * delta_time.asMilliseconds();
+        constexpr float pi = 3.14159f;
+        float move_x = ball_speed * std::cos(ball_angle * pi / 180.f) * delta_time.asMilliseconds();
+        float move_y = ball_speed * std::sin(ball_angle * pi / 180.f) * delta_time.asMilliseconds();
         ball_shape.move(sf::Vector2f(move_x, move_y));
 
-        // Collisons with screen
+        // Collisons with sides of screen
         if (ball_shape.getPosition().x < 0 || ball_shape.getPosition().x + ball_shape.getRadius() * 2 > game_window_size.x) {
-            ball_angle = 180.f - ball_angle;
+            if (ball_shape.getPosition().x < 0) {
+                ball_shape.setPosition(sf::Vector2f(0.f, ball_shape.getPosition().y));
+            }
+            else {
+                ball_shape.setPosition(sf::Vector2f(game_window_size.x - ball_shape.getRadius() * 2, ball_shape.getPosition().y));
+            }
+            ball_collision_x();
         }
+
+        // Top of screen collision
         if (ball_shape.getPosition().y < 0) {
-            ball_angle = -ball_angle;
+            ball_shape.setPosition(sf::Vector2f(ball_shape.getPosition().x, 0.f));
+            ball_collision_y();
         }
+
+        // Bottom of screen collision
         if (ball_shape.getPosition().y + ball_shape.getRadius() * 2 > game_window_size.y) {
-            current_game_state = game_state::start;
-            // TODO: Change to return value that would indicate game over and handle game restart somewhere else
+            current_game_state = game_state::game_over;
         }
 
         if (circle_rectangle_collision(ball_shape, platform_shape)) {
-            // TODO: Look up math on how to calcule correct angle after collision
-            // For now just negate te angle
-
-            ball_angle = -ball_angle;
+            ball_shape.setPosition(sf::Vector2f(ball_shape.getPosition().x, platform_shape.getPosition().y - ball_shape.getRadius() * 2.f));
+            ball_collision_y();
         }
 
         std::vector<sf::RectangleShape>& block_shapes = game_blocks.get_block_shapes();
-        std::vector<sf::RectangleShape>::iterator it = block_shapes.begin();
-        
-        while (it != block_shapes.end()) {
+
+        for (auto it = block_shapes.begin(); it != block_shapes.end(); ++it) {
             if (circle_rectangle_collision(ball_shape, *it)) {
-                // TODO: Look up math on how to calcule correct angle after collision
-                // For now just negate te angle
-                ball_angle = -ball_angle;
+                float top_y_after_collision = ball_shape.getPosition().y > it->getPosition().y ? 
+                it->getPosition().y + it->getSize().y + ball_shape.getRadius() * 2 : 
+                it->getPosition().y - ball_shape.getRadius() * 2;
+
+                ball_shape.setPosition(sf::Vector2f(ball_shape.getPosition().x, top_y_after_collision));
+                ball_collision_y();
                 block_shapes.erase(it);
                 break;
             }
-            else ++it;
         }
     }
     ///////////////////// END BALL SECTION

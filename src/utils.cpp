@@ -1,4 +1,5 @@
 #include "utils.hpp"
+#include <math.h>
 
 bool circle_rectangle_collision(const sf::CircleShape circle, const sf::RectangleShape rectangle) {
     sf::Vector2f circle_center = circle.getPosition() + sf::Vector2f(circle.getRadius(), circle.getRadius());
@@ -12,8 +13,8 @@ bool circle_rectangle_collision(const sf::CircleShape circle, const sf::Rectangl
     float dx = circle_center.x - closest_x;
     float dy = circle_center.y - closest_y;
 
-    float distance_squared = dx * dx + dy * dy;
+    float distance = hypot(dx, dy);
     float radius = circle.getRadius();
 
-    return distance_squared < (radius * radius);
+    return distance < radius;
 }
