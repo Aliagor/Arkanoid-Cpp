@@ -21,6 +21,36 @@ enum class game_state {
     game_over
 };
 
+enum class upgrade_type {
+    extra_balls,
+    multiply_balls, // TODO 
+    bigger_platform // TODO
+};
+
+struct upgrade_entity {
+    sf::CircleShape shape;
+    upgrade_type type;
+};
+
+class ball {
+public:
+    ball(float angle, const sf::Vector2f position);
+    sf::CircleShape& get_shape();
+    float get_angle() const;
+    float& get_angle();
+    float get_speed() const;
+
+protected:
+    sf::CircleShape shape;
+    float angle;
+    float speed = 0.4f;
+};
+
+class small_ball: public ball {
+public:
+    small_ball(float angle, const sf::Vector2f position);
+};
+
 class arkanoid_game {
 public:
     arkanoid_game(const sf::Vector2u window_size);
@@ -36,19 +66,21 @@ private:
     sf::RectangleShape platform_shape;
     enum direction_single_axis platform_direction = direction_single_axis::none;
 
-    std::random_device rd;
-    std::mt19937 mt{rd()};
+    std::mt19937 mt{std::random_device ()()};
+
+    void spawn_upgrade(const sf::Vector2f position);
+    void apply_upgrade(const upgrade_entity& upgrade);
+    std::vector<upgrade_entity> upgrade_entities;
     
-    sf::CircleShape ball_shape;
-    float ball_angle = 0;
-    float ball_speed = 0.5f;
-    void ball_collision_x();
-    void ball_collision_y();
+    std::vector<std::unique_ptr<ball>> ball_entities;
+    void ball_collision_x(float& ball_angle);
+    void ball_collision_y(float& ball_angle);
     
     enum game_state current_game_state = game_state::start;
 
     void key_pressed(const sf::Event::KeyPressed &keyPressed);
     void key_released(const sf::Event::KeyReleased &keyReleased);
     void init_platform(const sf::Vector2u window_size);
-    void init_ball();
+    
+    void init_first_ball();
 };

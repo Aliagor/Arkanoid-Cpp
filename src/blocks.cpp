@@ -1,6 +1,6 @@
 #include "blocks.hpp"
 
-blocks::blocks(sf::Vector2u window_size){
+blocks::blocks(sf::Vector2u window_size) {
     constexpr int rows = 5;
     constexpr int columns = 10;
 
@@ -9,14 +9,23 @@ blocks::blocks(sf::Vector2u window_size){
     initialize_blocks(rows, columns, game_window_size);
 }
 
+block::block(sf::Vector2f block_size, sf::Vector2f position, sf::Color color = sf::Color::Blue) {
+    shape.setSize(block_size);
+    shape.setPosition(position);
+    shape.setFillColor(color);
+}
+
+hard_block::hard_block(sf::Vector2f block_size, sf::Vector2f position, sf::Color color = sf::Color::Cyan) : block(block_size, position, color) {
+}
+
 void blocks::draw(sf::RenderWindow& window) {
-    for (const auto& block : block_shapes) {
-        window.draw(block);
+    for (const auto& block : block_entities) {
+        window.draw(block->get_block_shape());
     }
 }
 
-std::vector<sf::RectangleShape>& blocks::get_block_shapes() {
-    return block_shapes;
+std::vector<std::unique_ptr<block>>& blocks::get_blocks() {
+    return block_entities;
 }
 
 void blocks::initialize_blocks(int rows, int columns, sf::Vector2u window_size) {
@@ -37,11 +46,34 @@ void blocks::initialize_blocks(int rows, int columns, sf::Vector2u window_size) 
                 j * (block_area_size.x / columns) + margin_x,
                 i * (block_area_size.y / rows) + margin_y
             );
-            sf::RectangleShape block_shape(block_size);
-            block_shape.setPosition(block_position);
-            block_shape.setFillColor(sf::Color::Blue);
 
-            block_shapes.push_back(block_shape);
+            if (i == rows - 1) {
+                block_entities.push_back(std::make_unique<hard_block>(block_size, block_position));
+            } else {
+                block_entities.push_back(std::make_unique<block>(block_size, block_position));
+            }
+            
         }
     }
+}
+
+sf::RectangleShape block::get_block_shape() const {
+    return shape;
+}
+
+void block::update(const sf::CircleShape& ball_shape) {
+
+}
+
+bool block::survive_collision() {
+    return false;
+}
+
+bool hard_block::survive_collision() {
+    if (durability > 0) {
+        --durability;
+        shape.setFillColor(sf::Color::Blue);
+        return true;
+    }
+    return false;
 }
