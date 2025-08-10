@@ -19,18 +19,19 @@ void arkanoid_game::init_platform(const sf::Vector2u window_size) {
 }
 
 void arkanoid_game::init_first_ball() {
-    constexpr float ball_angle = -80.f;
     const sf::Vector2f platform_top_center = sf::Vector2f(platform_shape.getPosition().x + platform_shape.getSize().x / 2.f, platform_shape.getPosition().y);
 
-    ball_entities.push_back(std::make_unique<ball>(ball_angle, platform_top_center));
+    ball_entities.push_back(std::make_unique<ball>(angle::from_degrees(-80), platform_top_center));
 }
 
-void arkanoid_game::ball_collision_x(float& ball_angle) {
-    ball_angle = 180.f - ball_angle + std::uniform_int_distribution<int>(-5, 5)(mt);
+void arkanoid_game::ball_collision_x(angle& ball_angle) {
+    float new_angle_degrees = 180.f - ball_angle.as_degrees() + std::uniform_int_distribution<int>(-5, 5)(mt);
+    ball_angle.set_from_degrees(new_angle_degrees);
 }
 
-void arkanoid_game::ball_collision_y(float& ball_angle) {
-    ball_angle = -ball_angle + std::uniform_int_distribution<int>(-5, 5)(mt);
+void arkanoid_game::ball_collision_y(angle& ball_angle) {
+    float new_angle_degrees = -ball_angle.as_degrees() + std::uniform_int_distribution<int>(-5, 5)(mt);
+    ball_angle.set_from_degrees(new_angle_degrees);
 }
 
 sf::RectangleShape arkanoid_game::get_platform_shape() const {
@@ -85,14 +86,13 @@ void arkanoid_game::key_released(const sf::Event::KeyReleased &keyReleased) {
 void arkanoid_game::update(sf::Time delta_time) {
     ///////////////////// PLATFORM SECTION
     float platform_speed = 0.4f;
-    float move_distance = platform_speed * delta_time.asMilliseconds();
 
     if (platform_direction == direction_single_axis::left) {
-        platform_shape.move(sf::Vector2f(-move_distance, 0.f));
+        move_shape(platform_shape, angle::from_degrees(180), platform_speed, delta_time);
     }
     
     if (platform_direction == direction_single_axis::right) {
-        platform_shape.move(sf::Vector2f(move_distance, 0.f));
+        move_shape(platform_shape, angle::from_degrees(0), platform_speed, delta_time);
     }
 
     // Collisons with screen
@@ -115,12 +115,7 @@ void arkanoid_game::update(sf::Time delta_time) {
         }
 
         if (current_game_state == game_state::playing) {
-            constexpr float pi = 3.14159f;
-            // Add functions to convert between degrees and radians
-            // Add objects radians and degrees to handle angle (konstruktory konwertujące) named constructor idom, strong typing
-            float move_x = ball_speed * std::cos(ball->get_angle() * pi / 180.f) * delta_time.asMilliseconds();
-            float move_y = ball_speed * std::sin(ball->get_angle() * pi / 180.f) * delta_time.asMilliseconds();
-            ball_shape.move(sf::Vector2f(move_x, move_y));
+            move_shape(ball_shape, ball->get_angle(), ball_speed, delta_time);
 
             // Collisons with sides of screen
             if (ball_shape.getPosition().x < 0 || ball_shape.getPosition().x + ball_shape.getRadius() * 2 > game_window_size.x) {
@@ -193,8 +188,8 @@ void arkanoid_game::update(sf::Time delta_time) {
     ///////////////////// END BALL SECTION
     ///////////////////// UPGRADE ENTITY SECTION
     for (auto it = upgrade_entities.begin(); it != upgrade_entities.end();) {
-        // Function for moving the shape (input delta_time, speed, direction)
-        it->shape.move(sf::Vector2f(0.f, 0.1f * delta_time.asMilliseconds()));
+        constexpr float upgrade_speed = 0.1f;
+        move_shape(it->shape, angle::from_degrees(90), upgrade_speed, delta_time);
 
         if (it->shape.getPosition().y > game_window_size.y) {
             it = upgrade_entities.erase(it);
@@ -209,13 +204,29 @@ void arkanoid_game::update(sf::Time delta_time) {
 }
 
 void arkanoid_game::spawn_upgrade(const sf::Vector2f position) {
+    int weigth_sum = 0;
     upgrade_entity upgrade = {sf::CircleShape(10.f)};
     upgrade.shape.setFillColor(sf::Color::Yellow);
     upgrade.shape.setPosition(position);
 
-    // For now only one type of upgrade, roll for it when more are added
-    // Losowanie z wagami
-    upgrade.type = upgrade_type::extra_balls;
+    std::map<upgrade_type, int> upgrade_weight_map = {
+        {upgrade_type::extra_balls, 1},
+        {upgrade_type::multiply_balls, 2}
+    };
+
+    for (auto entry : upgrade_weight_map) {
+        weigth_sum += entry.second;
+    }
+
+    int rolled_number = std::uniform_int_distribution<int>(1, weigth_sum)(mt);
+
+    for (auto entry : upgrade_weight_map) {
+        if (rolled_number < entry.second) {
+            upgrade.type = entry.first;
+            break;
+        }
+        rolled_number -= entry.second;
+    }
 
     upgrade_entities.push_back(upgrade);
 }
@@ -229,10 +240,19 @@ void arkanoid_game::apply_upgrade(const upgrade_entity& upgrade) {
             for (int i = 0; i < 3; ++i) {
                 // Move to separate function
                 float ball_angle = -45.f - i * 45.f;
-                ball_entities.push_back(std::make_unique<small_ball>(ball_angle, start_position));
+                ball_entities.push_back(std::make_unique<small_ball>(angle::from_degrees(ball_angle), start_position));
             }
         }
             break;
+        case upgrade_type::multiply_balls:
+            ball_entities.reserve(ball_entities.size() * 3);
+            for (auto& ball : ball_entities) {
+                for (int i = 1; i <= 2; ++i) {
+                    float new_angle_degrees = ball->get_angle().as_degrees() - 120 * i;
+                    ball_entities.push_back(std::make_unique<small_ball>(angle::from_degrees(new_angle_degrees), ball->get_shape().getPosition()));
+                }
+            }
+        break;
         default:
             break;
     }
@@ -254,13 +274,13 @@ void arkanoid_game::draw(sf::RenderWindow& window) {
     window.display();
 }
 
-ball::ball(float angle, const sf::Vector2f position) : angle(angle) {
+ball::ball(angle angle, const sf::Vector2f position) : angle_value(angle) {
     shape.setPosition(position);
     shape.setRadius(10.f);
     shape.setFillColor(sf::Color::Green);
 }
 
-small_ball::small_ball(float angle, const sf::Vector2f position) : ball(angle, position) {
+small_ball::small_ball(angle angle, const sf::Vector2f position) : ball(angle, position) {
     speed = 0.6f;
 
     shape.setPosition(position);
@@ -272,12 +292,12 @@ sf::CircleShape& ball::get_shape() {
     return shape;
 }
 
-float ball::get_angle() const {
-    return angle;
+angle ball::get_angle() const {
+    return angle_value;
 }
 
-float& ball::get_angle() {
-    return angle;
+angle& ball::get_angle() {
+    return angle_value;
 }
 
 float ball::get_speed() const {

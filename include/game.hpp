@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <random>
+#include <map>
 
 #include "blocks.hpp"
 #include "utils.hpp"
@@ -23,7 +24,7 @@ enum class game_state {
 
 enum class upgrade_type {
     extra_balls,
-    multiply_balls, // TODO 
+    multiply_balls,
     bigger_platform // TODO
 };
 
@@ -34,21 +35,21 @@ struct upgrade_entity {
 
 class ball {
 public:
-    ball(float angle, const sf::Vector2f position);
+    ball(angle angle, const sf::Vector2f position);
     sf::CircleShape& get_shape();
-    float get_angle() const;
-    float& get_angle();
+    angle get_angle() const;
+    angle& get_angle();
     float get_speed() const;
 
 protected:
     sf::CircleShape shape;
-    float angle;
+    angle angle_value;
     float speed = 0.4f;
 };
 
 class small_ball: public ball {
 public:
-    small_ball(float angle, const sf::Vector2f position);
+    small_ball(angle angle, const sf::Vector2f position);
 };
 
 class arkanoid_game {
@@ -73,8 +74,8 @@ private:
     std::vector<upgrade_entity> upgrade_entities;
     
     std::vector<std::unique_ptr<ball>> ball_entities;
-    void ball_collision_x(float& ball_angle);
-    void ball_collision_y(float& ball_angle);
+    void ball_collision_x(angle& ball_angle);
+    void ball_collision_y(angle& ball_angle);
     
     enum game_state current_game_state = game_state::start;
 
